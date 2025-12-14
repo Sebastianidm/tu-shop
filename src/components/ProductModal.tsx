@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, Bell } from "lucide-react";
 import { Product } from "@/types/product";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,11 +16,23 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }: ProductM
 
   if (!isOpen || !product) return null;
 
+  const isSizeOutOfStock = (size: string) => {
+    if (product.stockPerSize && product.stockPerSize[size] === 0) {
+      return true;
+    }
+    return false;
+  };
+
   const handleAddToCart = () => {
     if (selectedSize && product.inStock) {
       onAddToCart(product, selectedSize);
       onClose();
     }
+  };
+
+  const handleNotifyMe = () => {
+    alert(`¡Gracias! Te avisaremos cuando ${product.name} vuelva a estar disponible.`);
+    onClose();
   };
 
   return (
@@ -29,7 +41,7 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }: ProductM
         className="absolute inset-0 bg-background/80 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       <div className="relative bg-card rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-scale-in">
         <button
           onClick={onClose}
@@ -43,8 +55,13 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }: ProductM
             <img
               src={product.image}
               alt={product.name}
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover transition-opacity duration-300 ${!product.inStock ? 'opacity-80 grayscale-[0.5]' : ''}`}
             />
+            {!product.inStock && (
+              <div className="absolute top-4 left-4 bg-stone-800 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider rounded">
+                Agotado
+              </div>
+            )}
           </div>
 
           <div className="space-y-6">
@@ -67,47 +84,61 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }: ProductM
             <div className="space-y-3">
               <p className="text-sm font-medium text-foreground">Tallas disponibles:</p>
               <div className="flex gap-2 flex-wrap">
-                {product.sizes.map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    disabled={!product.inStock}
-                    className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                      selectedSize === size
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border hover:border-primary/50"
-                    } ${!product.inStock ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
+                {product.sizes.map((size) => {
+                  const isVariantSoldOut = isSizeOutOfStock(size);
+                  const isDisabled = !product.inStock || isVariantSoldOut;
 
-            <div className="pt-4">
-              {product.inStock ? (
-                <Badge className="bg-accent text-accent-foreground mb-4">
-                  En Stock
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="mb-4">
-                  Sin Stock
-                </Badge>
+                  return (
+                    <button
+                      key={size}
+                      onClick={() => !isDisabled && setSelectedSize(size)}
+                      disabled={isDisabled}
+                      className={`
+                        relative px-4 py-2 rounded-lg border-2 transition-all duration-200 
+                        ${selectedSize === size
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border"
+                        }
+                        ${isDisabled
+                          ? "opacity-40 cursor-not-allowed bg-muted border-dashed decoration-slate-500 line-through"
+                          : "hover:border-primary/50 cursor-pointer"
+                        }
+                      `}
+                    >
+                      {size}
+                    </button>
+                  );
+                })}
+              </div>
+              {product.inStock && product.stockPerSize && (
+                <p className="text-xs text-muted-foreground italic">
+                  * Las tallas tachadas no están disponibles actualmente.
+                </p>
               )}
             </div>
 
-            <Button
-              onClick={handleAddToCart}
-              disabled={!product.inStock || !selectedSize}
-              size="lg"
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-6 text-base rounded-full shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {!product.inStock
-                ? "Producto sin stock"
-                : !selectedSize
-                ? "Selecciona una talla"
-                : "Agregar al carrito"}
-            </Button>
+            <div className="pt-4">
+              {!product.inStock ? (
+                <Button
+                  onClick={handleNotifyMe}
+                  size="lg"
+                  className="w-full bg-stone-100 hover:bg-stone-200 text-stone-800 border-2 border-stone-300 font-medium py-6 text-base rounded-full shadow-sm transition-all duration-300 flex items-center justify-center gap-2"
+                >
+                  <Bell className="w-5 h-5" />
+                  Avísame cuando llegue
+                </Button>
+              ) : (
+
+                <Button
+                  onClick={handleAddToCart}
+                  disabled={!selectedSize}
+                  size="lg"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-6 text-base rounded-full shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {!selectedSize ? "Selecciona una talla" : "Agregar al carrito"}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>

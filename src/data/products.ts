@@ -1,4 +1,4 @@
-import { Product } from "@/types/product";
+import type { Product } from "../types/product";
 import product1 from "@/assets/product-1.jpg";
 import product2 from "@/assets/product-2.jpg";
 import product3 from "@/assets/product-3.jpg";
@@ -66,5 +66,10 @@ export const products: Product[] = [
     sizes: ["S", "M", "L"],
     inStock: true,
     category: "Pantalones",
+    stockPerSize: {
+      S: 5,
+      M: 0,
+      L: 10
+    }
   },
 ];
