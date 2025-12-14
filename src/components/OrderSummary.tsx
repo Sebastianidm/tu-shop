@@ -8,22 +8,26 @@ import { ShoppingBag, Package, CreditCard } from "lucide-react";
 import { AddressSelection } from "./AddressSelection";
 import { PaymentGateway } from "./PaymentGateway";
 
+
 interface OrderSummaryProps {
   items: CartItem[];
   addresses: Address[];
   selectedAddressId: string | null;
   onEditCart: () => void;
-  onSelectAddress: (addressId: string) => void;
+  onSelectAddress: (id: string) => void;
   onAddAddress: (address: Address) => void;
+  // Agregamos la prop user para silenciar el error, aunque no la usemos visualmente todavía
+  user?: { name: string; email: string; } | null;
 }
 
-export const OrderSummary = ({ 
-  items, 
-  addresses, 
-  selectedAddressId, 
-  onEditCart, 
-  onSelectAddress, 
-  onAddAddress 
+export const OrderSummary = ({
+  items,
+  addresses,
+  selectedAddressId,
+  onEditCart,
+  onSelectAddress,
+  onAddAddress,
+  user
 }: OrderSummaryProps) => {
   const [showAddressSelection, setShowAddressSelection] = useState(false);
   const [showPaymentGateway, setShowPaymentGateway] = useState(false);

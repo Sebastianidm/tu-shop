@@ -1,37 +1,44 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Bell } from "lucide-react";
 import { Product } from "@/types/product";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 interface ProductModalProps {
   product: Product | null;
   isOpen: boolean;
   onClose: () => void;
   onAddToCart: (product: Product, size: string) => void;
+  // Agregamos la prop faltante
+  onNotifyMe: (email: string) => void;
 }
 
-export const ProductModal = ({ product, isOpen, onClose, onAddToCart }: ProductModalProps) => {
+export const ProductModal = ({ product, isOpen, onClose, onAddToCart, onNotifyMe }: ProductModalProps) => {
   const [selectedSize, setSelectedSize] = useState<string>("");
+
+  // Limpiar selección al cerrar o cambiar producto
+  useEffect(() => {
+    if (!isOpen) setSelectedSize("");
+  }, [isOpen]);
 
   if (!isOpen || !product) return null;
 
-  const isSizeOutOfStock = (size: string) => {
-    if (product.stockPerSize && product.stockPerSize[size] === 0) {
-      return true;
-    }
-    return false;
+  // Lógica actualizada para leer el stock del array de sizes
+  const getSizeStock = (sizeName: string) => {
+    const sizeData = product.sizes.find(s => s.size === sizeName);
+    return sizeData ? sizeData.stock : 0;
   };
+
+  const totalStock = product.sizes.reduce((acc, curr) => acc + curr.stock, 0);
+  const isProductOutOfStock = totalStock === 0;
 
   const handleAddToCart = () => {
-    if (selectedSize && product.inStock) {
+    if (selectedSize && getSizeStock(selectedSize) > 0) {
       onAddToCart(product, selectedSize);
-      onClose();
     }
   };
 
-  const handleNotifyMe = () => {
-    alert(`¡Gracias! Te avisaremos cuando ${product.name} vuelva a estar disponible.`);
+  const handleNotifyAction = () => {
+    onNotifyMe("cliente@ejemplo.com"); // Simulamos el email por ahora
     onClose();
   };
 
@@ -51,19 +58,21 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }: ProductM
         </button>
 
         <div className="grid md:grid-cols-2 gap-8 p-6 md:p-8">
+          {/* Columna Imagen */}
           <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-muted">
             <img
               src={product.image}
               alt={product.name}
-              className={`w-full h-full object-cover transition-opacity duration-300 ${!product.inStock ? 'opacity-80 grayscale-[0.5]' : ''}`}
+              className={`w-full h-full object-cover transition-opacity duration-300 ${isProductOutOfStock ? 'opacity-80 grayscale-[0.5]' : ''}`}
             />
-            {!product.inStock && (
+            {isProductOutOfStock && (
               <div className="absolute top-4 left-4 bg-stone-800 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider rounded">
                 Agotado
               </div>
             )}
           </div>
 
+          {/* Columna Info */}
           <div className="space-y-6">
             <div>
               <p className="text-sm uppercase tracking-wider text-muted-foreground mb-2">
@@ -72,7 +81,7 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }: ProductM
               <h2 className="font-serif text-3xl md:text-4xl font-bold text-foreground mb-4">
                 {product.name}
               </h2>
-              <p className="text-2xl font-serif font-semibold text-primary">
+              <p className="text-2xl font-serif font-semibold text-[rgb(157,125,72)]">
                 ${product.price.toLocaleString()}
               </p>
             </div>
@@ -84,56 +93,57 @@ export const ProductModal = ({ product, isOpen, onClose, onAddToCart }: ProductM
             <div className="space-y-3">
               <p className="text-sm font-medium text-foreground">Tallas disponibles:</p>
               <div className="flex gap-2 flex-wrap">
-                {product.sizes.map((size) => {
-                  const isVariantSoldOut = isSizeOutOfStock(size);
-                  const isDisabled = !product.inStock || isVariantSoldOut;
+                {product.sizes.map((sizeData) => {
+                  const stock = sizeData.stock;
+                  const isVariantSoldOut = stock === 0;
 
                   return (
                     <button
-                      key={size}
-                      onClick={() => !isDisabled && setSelectedSize(size)}
-                      disabled={isDisabled}
+                      key={sizeData.size}
+                      onClick={() => !isVariantSoldOut && setSelectedSize(sizeData.size)}
+                      disabled={isVariantSoldOut}
                       className={`
                         relative px-4 py-2 rounded-lg border-2 transition-all duration-200 
-                        ${selectedSize === size
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border"
+                        ${selectedSize === sizeData.size
+                          ? "border-[rgb(157,125,72)] bg-[rgb(157,125,72)] text-white"
+                          : "border-gray-200 bg-white"
                         }
-                        ${isDisabled
-                          ? "opacity-40 cursor-not-allowed bg-muted border-dashed decoration-slate-500 line-through"
-                          : "hover:border-primary/50 cursor-pointer"
+                        ${isVariantSoldOut
+                          ? "opacity-40 cursor-not-allowed bg-gray-100 decoration-slate-500 line-through"
+                          : "hover:border-[rgb(157,125,72)]/50 cursor-pointer"
                         }
                       `}
                     >
-                      {size}
+                      {sizeData.size}
                     </button>
                   );
                 })}
               </div>
-              {product.inStock && product.stockPerSize && (
-                <p className="text-xs text-muted-foreground italic">
-                  * Las tallas tachadas no están disponibles actualmente.
+
+              {/* Mensaje de stock bajo */}
+              {selectedSize && getSizeStock(selectedSize) < 3 && getSizeStock(selectedSize) > 0 && (
+                <p className="text-xs text-orange-600 font-medium animate-pulse">
+                  ¡Quedan pocas unidades!
                 </p>
               )}
             </div>
 
             <div className="pt-4">
-              {!product.inStock ? (
+              {isProductOutOfStock || (selectedSize && getSizeStock(selectedSize) === 0) ? (
                 <Button
-                  onClick={handleNotifyMe}
+                  onClick={handleNotifyAction}
                   size="lg"
-                  className="w-full bg-stone-100 hover:bg-stone-200 text-stone-800 border-2 border-stone-300 font-medium py-6 text-base rounded-full shadow-sm transition-all duration-300 flex items-center justify-center gap-2"
+                  className="w-full bg-stone-100 hover:bg-stone-200 text-stone-800 border-2 border-stone-300 font-medium py-6 text-base rounded-full"
                 >
-                  <Bell className="w-5 h-5" />
+                  <Bell className="w-5 h-5 mr-2" />
                   Avísame cuando llegue
                 </Button>
               ) : (
-
                 <Button
                   onClick={handleAddToCart}
                   disabled={!selectedSize}
                   size="lg"
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-6 text-base rounded-full shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[rgb(157,125,72)] hover:bg-[rgb(140,110,60)] text-white font-medium py-6 text-base rounded-full shadow-lg transition-all duration-300 disabled:opacity-50"
                 >
                   {!selectedSize ? "Selecciona una talla" : "Agregar al carrito"}
                 </Button>

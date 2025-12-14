@@ -1,26 +1,8 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { CreditCard, Lock, Check } from "lucide-react";
-
-const paymentSchema = z.object({
-  cardNumber: z
-    .string()
-    .regex(/^\d{16}$/, "Número de tarjeta inválido (16 dígitos)"),
-  cardName: z.string().min(3, "Nombre en la tarjeta requerido"),
-  expiryDate: z
-    .string()
-    .regex(/^(0[1-9]|1[0-2])\/\d{2}$/, "Formato MM/YY"),
-  cvv: z.string().regex(/^\d{3,4}$/, "CVV inválido (3-4 dígitos)"),
-});
-
-type PaymentFormData = z.infer<typeof paymentSchema>;
+import { CreditCard, Lock, Loader2 } from "lucide-react";
 
 interface PaymentGatewayProps {
   total: number;
@@ -29,182 +11,89 @@ interface PaymentGatewayProps {
 }
 
 export const PaymentGateway = ({ total, onCancel, onSuccess }: PaymentGatewayProps) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<PaymentFormData>({
-    resolver: zodResolver(paymentSchema),
-  });
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-  const onSubmit = async (data: PaymentFormData) => {
-    setIsProcessing(true);
-    
-    // Simular procesamiento de pago
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    
-    setIsProcessing(false);
-    setIsSuccess(true);
-
-    // Mostrar éxito por 2 segundos antes de llamar onSuccess
+    // Simulamos un proceso de red de 2 segundos
     setTimeout(() => {
+      setIsLoading(false);
       onSuccess();
     }, 2000);
   };
 
-  const formatCardNumber = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    return numbers.slice(0, 16);
-  };
-
-  const formatExpiryDate = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    if (numbers.length >= 2) {
-      return `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}`;
-    }
-    return numbers;
-  };
-
-  if (isSuccess) {
-    return (
-      <Card className="p-12 text-center space-y-6 animate-scale-in">
-        <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-          <Check className="h-10 w-10 text-primary" />
-        </div>
-        <div className="space-y-2">
-          <h3 className="font-serif text-3xl font-semibold text-foreground">
-            ¡Pago Exitoso!
-          </h3>
-          <p className="text-muted-foreground">
-            Tu pedido ha sido confirmado y será enviado pronto
-          </p>
-        </div>
-      </Card>
-    );
-  }
-
   return (
-    <Card className="p-6 space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3 pb-4 border-b">
-        <CreditCard className="h-6 w-6 text-primary" />
-        <h3 className="font-serif text-2xl font-semibold">Pasarela de Pago</h3>
-      </div>
-
-      <div className="bg-muted/30 p-4 rounded-xl space-y-2">
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Total a pagar</span>
-          <span className="text-2xl font-serif font-bold text-primary">
-            ${total.toLocaleString()}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Lock className="h-3 w-3" />
-          <span>Pago seguro y encriptado</span>
+    <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 animate-fade-in">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="font-serif text-xl font-bold flex items-center gap-2">
+          <CreditCard className="w-5 h-5 text-[rgb(157,125,72)]" />
+          Tarjeta de Crédito / Débito
+        </h3>
+        <div className="flex gap-2">
+          {/* Iconos de tarjetas simulados */}
+          <div className="w-8 h-5 bg-gray-200 rounded"></div>
+          <div className="w-8 h-5 bg-gray-200 rounded"></div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2">
-          <Label htmlFor="cardNumber">Número de Tarjeta</Label>
-          <Input
-            id="cardNumber"
-            {...register("cardNumber")}
-            onChange={(e) => {
-              e.target.value = formatCardNumber(e.target.value);
-            }}
-            placeholder="1234 5678 9012 3456"
-            maxLength={16}
-            className="rounded-lg font-mono"
-          />
-          {errors.cardNumber && (
-            <p className="text-sm text-destructive">{errors.cardNumber.message}</p>
-          )}
+          <Label htmlFor="cardName">Nombre en la tarjeta</Label>
+          <Input id="cardName" placeholder="Como aparece en el plástico" required />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="cardName">Nombre en la Tarjeta</Label>
-          <Input
-            id="cardName"
-            {...register("cardName")}
-            placeholder="MARÍA GONZÁLEZ"
-            className="rounded-lg uppercase"
-          />
-          {errors.cardName && (
-            <p className="text-sm text-destructive">{errors.cardName.message}</p>
-          )}
+          <Label htmlFor="cardNumber">Número de tarjeta</Label>
+          <div className="relative">
+            <Input id="cardNumber" placeholder="0000 0000 0000 0000" required maxLength={19} />
+            <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="expiryDate">Fecha de Expiración</Label>
-            <Input
-              id="expiryDate"
-              {...register("expiryDate")}
-              onChange={(e) => {
-                e.target.value = formatExpiryDate(e.target.value);
-              }}
-              placeholder="MM/YY"
-              maxLength={5}
-              className="rounded-lg font-mono"
-            />
-            {errors.expiryDate && (
-              <p className="text-sm text-destructive">{errors.expiryDate.message}</p>
-            )}
+            <Label htmlFor="expiry">Expiración (MM/AA)</Label>
+            <Input id="expiry" placeholder="MM/AA" required maxLength={5} />
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="cvv">CVV</Label>
-            <Input
-              id="cvv"
-              {...register("cvv")}
-              type="password"
-              maxLength={4}
-              placeholder="123"
-              className="rounded-lg font-mono"
-            />
-            {errors.cvv && (
-              <p className="text-sm text-destructive">{errors.cvv.message}</p>
-            )}
+            <Label htmlFor="cvc">CVC</Label>
+            <Input id="cvc" placeholder="123" required maxLength={3} type="password" />
           </div>
         </div>
 
-        <Separator className="my-6" />
-
-        <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isProcessing}
-            className="flex-1 rounded-full"
-          >
-            Cancelar
-          </Button>
+        <div className="pt-4 space-y-3">
           <Button
             type="submit"
-            disabled={isProcessing}
-            className="flex-1 rounded-full bg-primary hover:bg-primary/90"
+            disabled={isLoading}
+            className="w-full bg-[rgb(157,125,72)] hover:bg-[rgb(140,110,60)] text-white font-medium py-6 rounded-full text-lg shadow-lg"
           >
-            {isProcessing ? (
+            {isLoading ? (
               <>
-                <span className="animate-pulse">Procesando...</span>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Procesando...
               </>
             ) : (
-              <>
-                <Lock className="mr-2 h-4 w-4" />
-                Pagar ${total.toLocaleString()}
-              </>
+              `Pagar $${total.toLocaleString()}`
             )}
           </Button>
-        </div>
 
-        <p className="text-xs text-center text-muted-foreground pt-2">
-          Este es un simulador de pago. No se realizarán cargos reales.
-        </p>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onCancel}
+            disabled={isLoading}
+            className="w-full text-muted-foreground"
+          >
+            Cancelar y volver
+          </Button>
+        </div>
       </form>
-    </Card>
+
+      <div className="mt-6 text-center text-xs text-gray-400 flex items-center justify-center gap-1">
+        <Lock className="w-3 h-3" />
+        Pago 100% seguro encriptado con SSL
+      </div>
+    </div>
   );
 };
